@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Screen</title>
+    <link rel="stylesheet" href="/screen/style.css">
+</head>
+<body>
+
+    <div id="join-overlay">
+        <div id="game-id-label">SPILL-ID</div>
+        <div id="game-id"></div>
+
+        <div id="qr-code"></div>
+        <div id="join-url"></div>
+
+        <div id="player-list-label">Spillere</div>
+        <div id="player-list"></div>
+    </div>
+
+    <div id="game-container"></div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <script src="/screen/screen.js"></script>
+</body>
+</html>
