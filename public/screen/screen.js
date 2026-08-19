@@ -494,7 +494,7 @@ function update(time, delta) {
                 maxLives: MAX_LIVES
             });
         }
-        //checkVoidDeath(p);
+        checkVoidDeath(p);
 
         if (p.inputX !== 0) {
             //console.log('inputX:', p.inputX, 'velocityX:', p.sprite.body.velocity.x);
@@ -526,7 +526,7 @@ function update(time, delta) {
         if (fpsText) fpsText.setText(`FPS: ${Math.round(game.loop.actualFps)}`);
     }
 
-    //updateCamera()
+    updateCamera()
 
     
     
