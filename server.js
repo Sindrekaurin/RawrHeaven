@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const server = http.createServer(app);
@@ -34,7 +35,20 @@ app.get('/controller/:gameId/:username', (req, res) => {
 });
 
 app.get('/screen/:gameId', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public/screen/index.html'));
+    const htmlPath = path.join(__dirname, 'public/screen/index.html');
+    let html = fs.readFileSync(htmlPath, 'utf8');
+
+    const config = {
+        siteBaseUrl: process.env.SITE_BASE_URL || `http://${req.get('host')}`,
+        devMode: process.env.NODE_ENV !== 'production'
+    };
+
+    const configScript = `<script>window.__CONFIG__ = ${JSON.stringify(config)};</script>`;
+
+    // injiser rett før </head> (eller før hovedscriptet ditt)
+    html = html.replace('</head>', `${configScript}</head>`);
+
+    res.send(html);
 });
 
 
