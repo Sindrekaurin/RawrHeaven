@@ -67,7 +67,7 @@ function updateCamera() {
     });
 
     const PADDING = 250;
-    const MIN_ZOOM = 0.6;
+    const MIN_ZOOM = 1;
     const MAX_ZOOM = 1.4;
 
     const width = Math.max(maxX - minX + PADDING * 2, 200);
@@ -85,7 +85,7 @@ function updateCamera() {
         MIN_ZOOM, MAX_ZOOM
     );
 
-    //camera.zoom = Math.round(Phaser.Math.Linear(camera.zoom, targetZoom, 0.05) * 100) / 100;
+    camera.zoom = Math.round(Phaser.Math.Linear(camera.zoom, targetZoom, 0.05) * 100) / 100;
     camera.zoom = Phaser.Math.Linear(camera.zoom, targetZoom, 0.05);
     
 
@@ -93,7 +93,7 @@ function updateCamera() {
     const centerY = (minY + maxY) / 2;
     const newX = Phaser.Math.Linear(camera.midPoint.x, centerX, 0.08);
     const newY = Phaser.Math.Linear(camera.midPoint.y, centerY, 0.08);
-    //camera.centerOn(Math.round(newX), Math.round(newY));
+    camera.centerOn(Math.round(newX), Math.round(newY));
     camera.centerOn(newX, newY);
 }
 
@@ -224,17 +224,19 @@ const MAX_LIVES = 3;
 const STATE_SYNC_INTERVAL = 150; // ms mellom hver oppdatering sendt til kontrollere
 const DEATH_ZONE_PADDING = 200; // hvor langt utenfor kartet man må være for å "dø"
 
+const BG_MARGIN = 1.15; // 15% ekstra margin rundt bakgrunnen
 
 
 // --- Phaser-oppsett ---
-const DEV_MODE = true; // sett til false før du deler/publiserer
+const DEV_MODE = window.__CONFIG__?.devMode ?? false;
 
 const config = {
     type: Phaser.AUTO,
     parent: 'game-container',
     width: 1280,
     height: 720,
-    backgroundColor: '#1a1a2e',
+    //backgroundColor: '#1a1a2e',
+    backgroundColor: '#ffffff',
 
     physics: {
         default: 'arcade',
@@ -252,7 +254,7 @@ const config = {
 
     render: {
         pixelArt: true,
-        roundPixels: true,
+        roundPixels: false,
         antialias: false
     },
 
@@ -280,6 +282,7 @@ let mapData;
 function preload() {
     this.load.atlas(CHARACTER_KEY, `/screen/sprites/${CHARACTER_KEY}.png`, `/screen/sprites/${CHARACTER_KEY}.json`);
     this.load.json('map', `/screen/maps/${MAP_KEY}.json`);
+    this.load.image('background', `/screen/backgrounds/arena_01.png`); // legg til denne
 }
 
 
@@ -331,7 +334,7 @@ function buildAnimationsFromAtlas(key) {
             key: animKey,
             frames: frames.map(frame => ({ key, frame })),
             frameRate:  groupKey.startsWith('idle') ? 3 :
-                        groupKey.startsWith('walk') ? 10 :
+                        groupKey.startsWith('walk') ? 8 :
                         8,
             repeat: -1
         });
@@ -346,11 +349,15 @@ function create() {
     scene = this;
 
     availableAnimGroups = buildAnimationsFromAtlas(CHARACTER_KEY);
+    scene.textures.get(CHARACTER_KEY).setFilter(Phaser.Textures.FilterMode.NEAREST);
 
     // --- Bygg banen fra det kompilerte kartet ---
     mapData = this.cache.json.get('map');
     findOverlappingPlatforms(mapData.platforms);
     console.log("FindOverLappingPlatforms ran..")
+
+
+    
 
     if (!mapData) {
         console.error(`Kunne ikke laste kart "${MAP_KEY}" — sjekk at /screen/maps/${MAP_KEY}.json finnes`);
@@ -372,6 +379,16 @@ function create() {
         platforms.add(rect);
     });
 
+    // Bakgrunnsbilde - legges FØR plattformer/spillere slik at det havner bakerst
+    const bg = this.add.image(mapData.width / 2, mapData.height / 2, 'background');
+    const scaleX = mapData.width / bg.width;
+    const scaleY = mapData.height / bg.height;
+    //const scale = Math.max(scaleX, scaleY);
+    const scale = Math.max(scaleX, scaleY) * BG_MARGIN;
+    bg.setScale(scale);
+    bg.setDepth(-1);
+
+
     scene.spawnPoints = mapData.spawnPoints && mapData.spawnPoints.length > 0
         ? mapData.spawnPoints
         : [{ x: 150, y: 100 }]; // fallback hvis kartet mangler spawn-punkter
@@ -386,6 +403,7 @@ function create() {
 
     this.cameras.main.setZoom(zoom);
     this.cameras.main.centerOn(mapData.width / 2, mapData.height / 2);
+    this.cameras.main.preFX?.disable();
 
     this.physics.world.setBounds(0, -VOID_MARGIN, mapData.width, mapData.height + VOID_MARGIN);
 
@@ -541,6 +559,9 @@ function spawnPlayer(id, username) {
     const spawn = scene.spawnPoints[spawnIndex];
 
     const sprite = scene.add.sprite(spawn.x, spawn.y, CHARACTER_KEY);
+    sprite.preFX?.clear();
+    sprite.postFX?.clear();
+
 
     scene.physics.add.existing(sprite);
     sprite.body.setCollideWorldBounds(false);
