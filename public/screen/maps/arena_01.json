@@ -1,0 +1,142 @@
+{
+  "name": "arena_01",
+  "tileSize": 40,
+  "width": 2400,
+  "height": 600,
+  "spawnPoints": [
+    {
+      "x": 1180,
+      "y": 60
+    },
+    {
+      "x": 460,
+      "y": 300
+    },
+    {
+      "x": 1940,
+      "y": 300
+    }
+  ],
+  "platforms": [
+    {
+      "x": 340,
+      "y": 580,
+      "width": 680,
+      "height": 40,
+      "color": "#333344",
+      "type": "solid"
+    },
+    {
+      "x": 1200,
+      "y": 580,
+      "width": 720,
+      "height": 40,
+      "color": "#333344",
+      "type": "solid"
+    },
+    {
+      "x": 2060,
+      "y": 580,
+      "width": 680,
+      "height": 40,
+      "color": "#333344",
+      "type": "solid"
+    },
+    {
+      "x": 1200,
+      "y": 140,
+      "width": 240,
+      "height": 40,
+      "color": "#4a4a5e",
+      "type": "platform"
+    },
+    {
+      "x": 880,
+      "y": 260,
+      "width": 320,
+      "height": 40,
+      "color": "#4a4a5e",
+      "type": "platform"
+    },
+    {
+      "x": 1560,
+      "y": 260,
+      "width": 320,
+      "height": 40,
+      "color": "#4a4a5e",
+      "type": "platform"
+    },
+    {
+      "x": 1260,
+      "y": 300,
+      "width": 200,
+      "height": 40,
+      "color": "#4a4a5e",
+      "type": "platform"
+    },
+    {
+      "x": 460,
+      "y": 380,
+      "width": 360,
+      "height": 40,
+      "color": "#4a4a5e",
+      "type": "platform"
+    },
+    {
+      "x": 1940,
+      "y": 380,
+      "width": 360,
+      "height": 40,
+      "color": "#4a4a5e",
+      "type": "platform"
+    },
+    {
+      "x": 1080,
+      "y": 420,
+      "width": 160,
+      "height": 40,
+      "color": "#4a4a5e",
+      "type": "platform"
+    },
+    {
+      "x": 1460,
+      "y": 420,
+      "width": 200,
+      "height": 40,
+      "color": "#4a4a5e",
+      "type": "platform"
+    },
+    {
+      "x": 520,
+      "y": 540,
+      "width": 240,
+      "height": 40,
+      "color": "#4a4a5e",
+      "type": "platform"
+    },
+    {
+      "x": 1900,
+      "y": 540,
+      "width": 200,
+      "height": 40,
+      "color": "#4a4a5e",
+      "type": "platform"
+    },
+    {
+      "x": 760,
+      "y": 580,
+      "width": 160,
+      "height": 40,
+      "color": "transparent",
+      "type": "killzone"
+    },
+    {
+      "x": 1640,
+      "y": 580,
+      "width": 160,
+      "height": 40,
+      "color": "transparent",
+      "type": "killzone"
+    }
+  ]
+}

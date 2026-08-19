@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Character Designer</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: #111;
+            color: #fff;
+            font-family: Arial, sans-serif;
+        }
+
+        main {
+            width: min(900px, 100%);
+            margin: 0 auto;
+            padding: 40px 24px;
+        }
+
+        h1 {
+            margin: 0 0 30px;
+            font-size: 32px;
+        }
+
+        .form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        label {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            font-size: 14px;
+            color: #bbb;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #444;
+            border-radius: 6px;
+            background: #1c1c1c;
+            color: #fff;
+            font-size: 16px;
+        }
+
+        input[type="file"] {
+            padding: 10px;
+        }
+
+        button {
+            padding: 14px 20px;
+            border: 0;
+            border-radius: 6px;
+            background: #fff;
+            color: #111;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #ddd;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .icon-button {
+            padding: 8px 10px;
+            font-size: 14px;
+            font-weight: normal;
+            background: #2a2a2a;
+            color: #fff;
+            border: 1px solid #444;
+        }
+
+        .icon-button:hover {
+            background: #3a3a3a;
+        }
+
+        .icon-button.active {
+            background: #fff;
+            color: #111;
+        }
+
+        #imageList {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .image-card {
+            display: flex;
+            gap: 16px;
+            padding: 16px;
+            border: 1px solid #333;
+            border-radius: 8px;
+            background: #181818;
+        }
+
+        .image-card .thumb-wrap {
+            width: 140px;
+            height: 140px;
+            flex: none;
+            overflow: hidden;
+            border: 1px solid #444;
+            border-radius: 6px;
+            background:
+                repeating-conic-gradient(
+                    #222 0% 25%,
+                    #333 0% 50%
+                ) 50% / 20px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .image-card .thumb-wrap img {
+            max-width: 100%;
+            max-height: 100%;
+            image-rendering: pixelated;
+            transition: transform 0.15s ease;
+        }
+
+        .image-card .card-body {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            min-width: 0;
+        }
+
+        .image-card .card-body .filename-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .image-card .card-body .filename-row input {
+            flex: 1;
+        }
+
+        .image-card .original-name {
+            font-size: 12px;
+            color: #777;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .transform-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .remove-button {
+            background: #3a1f1f;
+            border-color: #5a2f2f;
+            color: #ff9a9a;
+        }
+
+        .remove-button:hover {
+            background: #4a2626;
+        }
+
+        #addMoreLabel {
+            align-self: flex-start;
+            display: inline-flex;
+            padding: 10px 16px;
+            border: 1px dashed #555;
+            border-radius: 6px;
+            color: #bbb;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        #addMoreLabel:hover {
+            border-color: #888;
+            color: #fff;
+        }
+
+        #addMoreInput {
+            display: none;
+        }
+
+        #status {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 6px;
+            background: #1c1c1c;
+            color: #aaa;
+            display: none;
+            white-space: pre-line;
+        }
+
+        .empty-hint {
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+
+<body>
+
+<main>
+
+    <h1>Character Designer</h1>
+
+    <form id="characterForm" class="form">
+
+        <label>
+            Folder name
+            <input
+                id="folderName"
+                name="folderName"
+                type="text"
+                placeholder="knight"
+                required
+            >
+        </label>
+
+        <label>
+            Images
+            <input
+                id="image"
+                name="image"
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                multiple
+            >
+        </label>
+
+        <div id="imageList"></div>
+
+        <label id="addMoreLabel" for="addMoreInput">
+            + Add more images
+        </label>
+        <input
+            id="addMoreInput"
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            multiple
+        >
+
+        <button
+            id="submitButton"
+            type="submit"
+        >
+            Convert to CSV
+        </button>
+
+    </form>
+
+    <div id="status"></div>
+
+</main>
+
+<script>
+    const form = document.getElementById("characterForm");
+
+    const imageInput = document.getElementById("image");
+    const addMoreInput = document.getElementById("addMoreInput");
+    const folderNameInput = document.getElementById("folderName");
+
+    const imageList = document.getElementById("imageList");
+    const submitButton = document.getElementById("submitButton");
+    const status = document.getElementById("status");
+
+    // Each entry: { id, blob, originalName, url, name, rotation (0/90/180/270), flipH, flipV }
+    let entries = [];
+    let nextId = 1;
+
+    // --- Persistence (IndexedDB for image blobs, localStorage for the folder name) ---
+    // Lets the person refresh the page without losing in-progress work.
+
+    const DB_NAME = "character-designer";
+    const STORE_NAME = "images";
+    let dbPromise = null;
+    let storageAvailable = true;
+
+    function openDb() {
+        return new Promise((resolve, reject) => {
+            if (!("indexedDB" in window)) {
+                reject(new Error("IndexedDB not supported"));
+                return;
+            }
+            const request = indexedDB.open(DB_NAME, 1);
+            request.onupgradeneeded = () => {
+                request.result.createObjectStore(STORE_NAME, { keyPath: "id" });
+            };
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    function getDb() {
+        if (!dbPromise) {
+            dbPromise = openDb().catch(error => {
+                storageAvailable = false;
+                console.warn("Image persistence unavailable:", error);
+                throw error;
+            });
+        }
+        return dbPromise;
+    }
+
+    async function dbGetAll() {
+        try {
+            const db = await getDb();
+            return await new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, "readonly");
+                const request = tx.objectStore(STORE_NAME).getAll();
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        } catch {
+            return [];
+        }
+    }
+
+    async function dbPut(record) {
+        if (!storageAvailable) return;
+        try {
+            const db = await getDb();
+            await new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, "readwrite");
+                tx.objectStore(STORE_NAME).put(record);
+                tx.oncomplete = () => resolve();
+                tx.onerror = () => reject(tx.error);
+            });
+        } catch (error) {
+            console.warn("Could not save image:", error);
+        }
+    }
+
+    async function dbDelete(id) {
+        if (!storageAvailable) return;
+        try {
+            const db = await getDb();
+            await new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, "readwrite");
+                tx.objectStore(STORE_NAME).delete(id);
+                tx.oncomplete = () => resolve();
+                tx.onerror = () => reject(tx.error);
+            });
+        } catch (error) {
+            console.warn("Could not remove saved image:", error);
+        }
+    }
+
+    async function dbClear() {
+        if (!storageAvailable) return;
+        try {
+            const db = await getDb();
+            await new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, "readwrite");
+                tx.objectStore(STORE_NAME).clear();
+                tx.oncomplete = () => resolve();
+                tx.onerror = () => reject(tx.error);
+            });
+        } catch (error) {
+            console.warn("Could not clear saved images:", error);
+        }
+    }
+
+    function persistEntry(entry) {
+        dbPut({
+            id: entry.id,
+            blob: entry.blob,
+            originalName: entry.originalName,
+            name: entry.name,
+            rotation: entry.rotation,
+            flipH: entry.flipH,
+            flipV: entry.flipV
+        });
+    }
+
+    async function loadPersistedEntries() {
+        const records = await dbGetAll();
+
+        entries = records.map(record => ({
+            id: record.id,
+            blob: record.blob,
+            originalName: record.originalName,
+            url: URL.createObjectURL(record.blob),
+            name: record.name,
+            rotation: record.rotation,
+            flipH: record.flipH,
+            flipV: record.flipV
+        }));
+
+        nextId = entries.reduce((max, entry) => Math.max(max, entry.id), 0) + 1;
+
+        const savedFolderName = localStorage.getItem("characterDesignerFolderName");
+        if (savedFolderName) {
+            folderNameInput.value = savedFolderName;
+        }
+
+        renderList();
+    }
+
+    folderNameInput.addEventListener("input", () => {
+        localStorage.setItem("characterDesignerFolderName", folderNameInput.value);
+    });
+
+    // --- Entries ---
+
+    function baseNameWithoutExt(fileName) {
+        const idx = fileName.lastIndexOf(".");
+        return idx > 0 ? fileName.slice(0, idx) : fileName;
+    }
+
+    function addFiles(fileList) {
+        Array.from(fileList).forEach(file => {
+            const entry = {
+                id: nextId++,
+                blob: file,
+                originalName: file.name,
+                url: URL.createObjectURL(file),
+                name: baseNameWithoutExt(file.name),
+                rotation: 0,
+                flipH: false,
+                flipV: false
+            };
+            entries.push(entry);
+            persistEntry(entry);
+        });
+        renderList();
+    }
+
+    function findEntry(id) {
+        return entries.find(entry => entry.id === id);
+    }
+
+    function previewTransform(entry) {
+        const scaleX = entry.flipH ? -1 : 1;
+        const scaleY = entry.flipV ? -1 : 1;
+        return `rotate(${entry.rotation}deg) scale(${scaleX}, ${scaleY})`;
+    }
+
+    function renderList() {
+        imageList.innerHTML = "";
+
+        if (entries.length === 0) {
+            const hint = document.createElement("p");
+            hint.className = "empty-hint";
+            hint.textContent = "No images selected yet.";
+            imageList.appendChild(hint);
+            return;
+        }
+
+        entries.forEach(entry => {
+            const card = document.createElement("div");
+            card.className = "image-card";
+
+            const thumbWrap = document.createElement("div");
+            thumbWrap.className = "thumb-wrap";
+
+            const img = document.createElement("img");
+            img.src = entry.url;
+            img.alt = entry.originalName;
+            img.style.transform = previewTransform(entry);
+            thumbWrap.appendChild(img);
+
+            const body = document.createElement("div");
+            body.className = "card-body";
+
+            const filenameRow = document.createElement("div");
+            filenameRow.className = "filename-row";
+
+            const nameInput = document.createElement("input");
+            nameInput.type = "text";
+            nameInput.value = entry.name;
+            nameInput.placeholder = "attack_a_01";
+            nameInput.addEventListener("input", () => {
+                entry.name = nameInput.value.trim();
+                persistEntry(entry);
+            });
+            filenameRow.appendChild(nameInput);
+
+            const removeButton = document.createElement("button");
+            removeButton.type = "button";
+            removeButton.className = "icon-button remove-button";
+            removeButton.textContent = "Remove";
+            removeButton.addEventListener("click", () => {
+                URL.revokeObjectURL(entry.url);
+                entries = entries.filter(item => item.id !== entry.id);
+                dbDelete(entry.id);
+                renderList();
+            });
+            filenameRow.appendChild(removeButton);
+
+            body.appendChild(filenameRow);
+
+            const originalName = document.createElement("div");
+            originalName.className = "original-name";
+            originalName.textContent = entry.originalName;
+            body.appendChild(originalName);
+
+            const transformRow = document.createElement("div");
+            transformRow.className = "transform-row";
+
+            const rotateLeftButton = document.createElement("button");
+            rotateLeftButton.type = "button";
+            rotateLeftButton.className = "icon-button";
+            rotateLeftButton.textContent = "Rotate ⟲";
+            rotateLeftButton.addEventListener("click", () => {
+                entry.rotation = (entry.rotation + 270) % 360;
+                img.style.transform = previewTransform(entry);
+                persistEntry(entry);
+            });
+            transformRow.appendChild(rotateLeftButton);
+
+            const rotateRightButton = document.createElement("button");
+            rotateRightButton.type = "button";
+            rotateRightButton.className = "icon-button";
+            rotateRightButton.textContent = "Rotate ⟳";
+            rotateRightButton.addEventListener("click", () => {
+                entry.rotation = (entry.rotation + 90) % 360;
+                img.style.transform = previewTransform(entry);
+                persistEntry(entry);
+            });
+            transformRow.appendChild(rotateRightButton);
+
+            const flipHButton = document.createElement("button");
+            flipHButton.type = "button";
+            flipHButton.className = "icon-button" + (entry.flipH ? " active" : "");
+            flipHButton.textContent = "Mirror ↔";
+            flipHButton.addEventListener("click", () => {
+                entry.flipH = !entry.flipH;
+                flipHButton.classList.toggle("active", entry.flipH);
+                img.style.transform = previewTransform(entry);
+                persistEntry(entry);
+            });
+            transformRow.appendChild(flipHButton);
+
+            const flipVButton = document.createElement("button");
+            flipVButton.type = "button";
+            flipVButton.className = "icon-button" + (entry.flipV ? " active" : "");
+            flipVButton.textContent = "Mirror ↕";
+            flipVButton.addEventListener("click", () => {
+                entry.flipV = !entry.flipV;
+                flipVButton.classList.toggle("active", entry.flipV);
+                img.style.transform = previewTransform(entry);
+                persistEntry(entry);
+            });
+            transformRow.appendChild(flipVButton);
+
+            body.appendChild(transformRow);
+
+            card.appendChild(thumbWrap);
+            card.appendChild(body);
+            imageList.appendChild(card);
+        });
+    }
+
+    // Draws the entry onto a canvas with its rotation/mirror baked in,
+    // and resolves to a Blob (PNG) reflecting those transforms.
+    function renderTransformedBlob(entry) {
+        return new Promise((resolve, reject) => {
+            const image = new Image();
+            image.onload = () => {
+                const rotated90 = entry.rotation === 90 || entry.rotation === 270;
+                const canvas = document.createElement("canvas");
+                canvas.width = rotated90 ? image.height : image.width;
+                canvas.height = rotated90 ? image.width : image.height;
+
+                const ctx = canvas.getContext("2d");
+                ctx.translate(canvas.width / 2, canvas.height / 2);
+                ctx.rotate((entry.rotation * Math.PI) / 180);
+                ctx.scale(entry.flipH ? -1 : 1, entry.flipV ? -1 : 1);
+                ctx.drawImage(image, -image.width / 2, -image.height / 2);
+
+                canvas.toBlob(blob => {
+                    if (blob) {
+                        resolve(blob);
+                    } else {
+                        reject(new Error("Could not process " + entry.originalName));
+                    }
+                }, "image/png");
+            };
+            image.onerror = () => reject(new Error("Could not load " + entry.originalName));
+            image.src = entry.url;
+        });
+    }
+
+    imageInput.addEventListener("change", () => {
+        addFiles(imageInput.files);
+        imageInput.value = "";
+    });
+
+    addMoreInput.addEventListener("change", () => {
+        addFiles(addMoreInput.files);
+        addMoreInput.value = "";
+    });
+
+    form.addEventListener("submit", async event => {
+        event.preventDefault();
+
+        const folderName = folderNameInput.value.trim();
+
+        if (!folderName) {
+            status.style.display = "block";
+            status.textContent = "Please enter a folder name.";
+            return;
+        }
+
+        if (entries.length === 0) {
+            status.style.display = "block";
+            status.textContent = "Please select at least one image.";
+            return;
+        }
+
+        const missingName = entries.find(entry => !entry.name);
+        if (missingName) {
+            status.style.display = "block";
+            status.textContent = `Please enter a CSV file name for "${missingName.originalName}".`;
+            return;
+        }
+
+        submitButton.disabled = true;
+        status.style.display = "block";
+        status.textContent = "Converting...";
+
+        try {
+            const formData = new FormData();
+            formData.append("folderName", folderName);
+
+            for (const entry of entries) {
+                const blob = await renderTransformedBlob(entry);
+                formData.append("images", blob, `${entry.name}.png`);
+                formData.append("fileNames", entry.name);
+            }
+
+            const response = await fetch(
+                "/api/design/convert",
+                {
+                    method: "POST",
+                    body: formData
+                }
+            );
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    result.error || "Conversion failed"
+                );
+            }
+
+            if (Array.isArray(result.paths)) {
+                status.textContent = "Created:\n" + result.paths.join("\n");
+            } else {
+                status.textContent = `Created ${result.path}`;
+            }
+
+            entries.forEach(entry => URL.revokeObjectURL(entry.url));
+            entries = [];
+            await dbClear();
+            renderList();
+
+        } catch (error) {
+            status.textContent = error.message;
+        } finally {
+            submitButton.disabled = false;
+        }
+    });
+
+    loadPersistedEntries();
+</script>
+
+</body>
+</html>

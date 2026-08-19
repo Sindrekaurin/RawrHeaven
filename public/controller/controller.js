@@ -36,8 +36,20 @@ joystick.on('move', (evt, data) => {
 });
 
 joystick.on('end', () => {
-    socket.emit('joystick', { x: 0, y: 0 });
+    socket.emit('joystick', {
+        gameId,
+        username,
+        x: 0,
+        y: 0
+    });
 });
+
+setInterval(() => {
+    if (joystick.get(0)) { // hvis joystick er aktiv
+        const data = joystick.get(0).frontPosition; // eller lagre siste data fra 'move'
+        // re-emit siste kjente verdi
+    }
+}, 300);
 
 // --- Knapper A og B (høyre halvdel) ---
 function setupButton(elementId, buttonName) {
@@ -81,4 +93,112 @@ let lastTouchEnd = 0;
 // Blokker gesture-basert zoom (pinch) på iOS Safari spesifikt
 document.addEventListener('gesturestart', (e) => {
     e.preventDefault();
+});
+
+socket.on('player-state', ({ stamina, maxStamina, lives, maxLives }) => {
+    //console.log('Mottok player-state:', stamina, lives);
+
+    // Stamina-bar
+    const staminaFill = document.getElementById('stamina-bar-fill');
+    const staminaRatio = stamina / maxStamina;
+    staminaFill.style.width = `${staminaRatio * 100}%`;
+    staminaFill.style.background = staminaRatio < 0.3 ? '#e74c3c' : '#f1c40f';
+
+    // Hjerter
+    const heartsContainer = document.getElementById('hearts-container');
+    heartsContainer.innerHTML = '';
+    for (let i = 0; i < maxLives; i++) {
+        const heart = document.createElement('span');
+        heart.className = 'heart' + (i < lives ? ' filled' : '');
+        heart.textContent = '♥';
+        heartsContainer.appendChild(heart);
+    }
+});
+
+// --- WASD keyboard controls ---
+const keys = {
+    w: false,
+    a: false,
+    s: false,
+    d: false,
+};
+
+let wasdActive = false;
+
+function updateWasdJoystick() {
+    let x = 0;
+    let y = 0;
+
+    if (keys.a) x -= 1;
+    if (keys.d) x += 1;
+    if (keys.w) y -= 1;
+    if (keys.s) y += 1;
+
+    const magnitude = Math.sqrt(x * x + y * y);
+
+    if (magnitude > 0) {
+        x /= magnitude;
+        y /= magnitude;
+        wasdActive = true;
+
+        socket.emit('joystick', {
+            gameId,
+            username,
+            x,
+            y
+        });
+    } else if (wasdActive) {
+        wasdActive = false;
+
+        socket.emit('joystick', {
+            gameId,
+            username,
+            x: 0,
+            y: 0
+        });
+    }
+}
+
+document.addEventListener('keydown', (e) => {
+    const key = e.key.toLowerCase();
+
+    if (key === 'w' || key === 'a' || key === 's' || key === 'd') {
+        e.preventDefault();
+
+        keys[key] = true;
+        updateWasdJoystick();
+    }
+});
+
+document.addEventListener('keyup', (e) => {
+    const key = e.key.toLowerCase();
+
+    if (key === 'w' || key === 'a' || key === 's' || key === 'd') {
+        e.preventDefault();
+
+        keys[key] = false;
+        updateWasdJoystick();
+    }
+});
+
+document.addEventListener('keydown', (e) => {
+    if (e.code === 'Space') {
+        e.preventDefault();
+
+        socket.emit('button', {
+            button: 'A',
+            pressed: true
+        });
+    }
+});
+
+document.addEventListener('keyup', (e) => {
+    if (e.code === 'Space') {
+        e.preventDefault();
+
+        socket.emit('button', {
+            button: 'A',
+            pressed: false
+        });
+    }
 });

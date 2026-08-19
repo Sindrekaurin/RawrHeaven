@@ -96,3 +96,15 @@ html, body {
     font-size: 13px;
     font-style: italic;
 }
+
+.qr {
+    width: 150px;
+    height: 150px;
+    border: 1px solid #f1c40f;
+}
+
+.qr img {
+    width: 150px;
+    height: 150px;
+    display: block;
+}

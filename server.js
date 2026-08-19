@@ -6,6 +6,12 @@ const path = require('path');
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
+const { imageToCsv } = require("./characters/image_to_character");
+const multer = require("multer");
+const os = require("os");
+
+
+
 
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -30,6 +36,57 @@ app.get('/controller/:gameId/:username', (req, res) => {
 app.get('/screen/:gameId', (req, res) => {
     res.sendFile(path.join(__dirname, 'public/screen/index.html'));
 });
+
+
+// Design API
+const upload = multer({
+    dest: path.join(os.tmpdir(), "rawrheaven")
+});
+
+app.post("/api/design/convert", upload.array("images"), async (req, res) => {
+    try {
+        const files = req.files;
+        const folderName = req.body.folderName;
+
+        // multer gives a single string if there's only one field value,
+        // or an array if there are several — normalize to an array.
+        const fileNames = Array.isArray(req.body.fileNames)
+            ? req.body.fileNames
+            : [req.body.fileNames];
+
+        if (!files || files.length === 0) {
+            return res.status(400).json({ error: "No images provided." });
+        }
+
+        if (!folderName) {
+            return res.status(400).json({ error: "Folder name is required." });
+        }
+
+        const paths = [];
+
+        for (let i = 0; i < files.length; i++) {
+            const image = files[i].path;
+            const fileName = fileNames[i];
+
+            const outputPath = await imageToCsv(
+                image,
+                folderName,
+                fileName
+            );
+
+            paths.push(outputPath);
+        }
+
+        res.json({ paths });
+
+    } catch (error) {
+        res.status(500).json({ error: error.message || "Conversion failed" });
+    }
+});
+
+
+
+
 
 // Enkel registrering: gameId -> { socketId: username }
 const gameRooms = {};
@@ -63,6 +120,11 @@ io.on('connection', (socket) => {
 
     socket.on('button', (data) => {
         socket.to(socket.data.gameId).emit('button', { id: socket.id, ...data });
+    });
+
+    socket.on('player-state', ({ targetId, stamina, lives, maxStamina, maxLives }) => {
+        //console.log(`Mottok player-state for ${targetId}: stamina=${stamina}, lives=${lives}`);
+        io.to(targetId).emit('player-state', { stamina, lives, maxStamina, maxLives });
     });
 
     socket.on('disconnect', () => {

@@ -20,5 +20,5 @@ document.getElementById('btn-join').addEventListener('click', () => {
 
     console.log(`Bli med i spill ${gameId} som ${username}`);
 
-    window.location.href = `/controller/${encodeURIComponent(gameId)}/${encodeURIComponent(username)}`;
+    window.location.href = `/controller/${encodeURIComponent(gameId.toLowerCase())}/${encodeURIComponent(username)}`;
 });
