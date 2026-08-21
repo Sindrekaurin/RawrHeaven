@@ -44,7 +44,7 @@ html, body {
 
 #game-id {
     font-size: 32px;
-    font-weight: bold;
+    font-weight: 600    ;
     letter-spacing: 4px;
     color: #f1c40f;
     margin-bottom: 14px;
@@ -107,4 +107,253 @@ html, body {
     width: 150px;
     height: 150px;
     display: block;
+}
+
+#screen-button-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+
+    margin-top: 16px;
+    margin-bottom: 16px;
+}
+
+.screen-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 46px;
+    height: 46px;
+
+    border-radius: 50%;
+
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+
+    cursor: pointer;
+
+    transition:
+        transform 120ms ease,
+        background 120ms ease,
+        box-shadow 120ms ease;
+
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.screen-button:hover {
+    background: rgba(255, 255, 255, 0.16);
+    transform: scale(1.08);
+
+    box-shadow:
+        0 4px 12px rgba(0, 0, 0, 0.3),
+        0 0 12px rgba(241, 196, 15, 0.2);
+}
+
+.screen-button:active {
+    transform: scale(0.92);
+}
+
+.screen-button-symbol {
+    width: 28px;
+    height: 28px;
+
+    fill: #f1c40f;
+
+    pointer-events: none;
+
+    transition:
+        transform 120ms ease,
+        fill 120ms ease;
+}
+
+.screen-button.muted .screen-button-symbol {
+    fill: #888;
+}
+
+.screen-button.muted {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+#start-game-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: rgba(5, 7, 12, 0.72);
+
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+#start-game-panel {
+    width: min(560px, calc(100vw - 40px));
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    padding: 32px;
+
+    background: rgba(15, 18, 25, 0.94);
+
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+
+    box-shadow:
+        0 25px 80px rgba(0, 0, 0, 0.55),
+        0 0 0 1px rgba(255, 255, 255, 0.02);
+}
+
+#game-logo {
+    margin-top: 4px;
+
+    color: #ffffff;
+
+    font-size: 42px;
+    font-weight: 600;
+    letter-spacing: 5px;
+    line-height: 1;
+}
+
+
+#map-preview {
+    position: relative;
+
+    width: 100%;
+    height: 220px;
+
+    margin-top: 28px;
+
+    overflow: hidden;
+
+    border-radius: 14px;
+
+    background: #11151c;
+}
+
+#map-preview-image {
+    width: 100%;
+    height: 100%;
+
+    object-fit: cover;
+
+    display: block;
+
+    opacity: 0.8;
+}
+
+#map-preview-overlay {
+    position: absolute;
+    inset: 0;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+
+    padding: 24px;
+
+    background:
+        linear-gradient(
+            to top,
+            rgba(5, 7, 12, 0.95) 0%,
+            rgba(5, 7, 12, 0.35) 55%,
+            rgba(5, 7, 12, 0.05) 100%
+        );
+}
+
+#map-name {
+    color: #ffffff;
+
+    font-size: 25px;
+    font-weight: 600;
+}
+
+#map-description {
+    max-width: 420px;
+
+    margin-top: 6px;
+
+    color: rgba(255, 255, 255, 0.65);
+
+    font-size: 16px;
+    line-height: 1.5;
+}
+
+#start-game-actions {
+    width: 100%;
+
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+
+    margin-top: 18px;
+}
+
+#start-game-button,
+#change-map-button,
+#guide-button {
+    height: 52px;
+
+    border: 0;
+    border-radius: 10px;
+
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: 500;
+
+    cursor: pointer;
+
+    transition:
+        transform 0.15s ease,
+        background 0.15s ease,
+        opacity 0.15s ease;
+}
+
+#start-game-button {
+    grid-column: 1 / -1;
+
+    color: #ffffff;
+    background: #2ecc71;
+}
+
+#start-game-button:hover {
+    background: #35d879;
+    transform: translateY(-1px);
+}
+
+#change-map-button,
+#guide-button {
+    color: rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.07);
+
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+#change-map-button:hover,
+#guide-button:hover {
+    background: rgba(255, 255, 255, 0.12);
+    transform: translateY(-1px);
+}
+
+#start-game-button:active,
+#change-map-button:active,
+#guide-button:active {
+    transform: translateY(0);
+}
+
+#game-copyright {
+    margin-top: 24px;
+
+    color: rgba(255, 255, 255, 0.3);
+
+    font-size: 11px;
+    letter-spacing: 0.5px;
 }

@@ -89,19 +89,19 @@ function updateCamera() {
     );
 
     camera.zoom = Math.round(Phaser.Math.Linear(camera.zoom, targetZoom, 0.05) * 100) / 100;
-    camera.zoom = Phaser.Math.Linear(camera.zoom, targetZoom, 0.05);
+    //camera.zoom = Phaser.Math.Linear(camera.zoom, targetZoom, 0.05);
     
 
     const centerX = (minX + maxX) / 2;
     const centerY = (minY + maxY) / 2;
     const newX = Phaser.Math.Linear(camera.midPoint.x, centerX, 0.08);
     const newY = Phaser.Math.Linear(camera.midPoint.y, centerY, 0.08);
-    camera.centerOn(Math.round(newX), Math.round(newY));
+    //camera.centerOn(Math.round(newX), Math.round(newY));
     camera.centerOn(newX, newY);
 }
 
 function checkVoidDeath(p) {
-    const { x, y } = p.sprite;
+    const { x, y } = p.sprite;  
     const outOfBounds =
         y > mapData.height + DEATH_ZONE_PADDING ||
         x < -DEATH_ZONE_PADDING ||
@@ -202,6 +202,66 @@ function findOverlappingPlatforms(platformsData) {
     }
 }
 
+let backgroundMusic = null;
+
+function startBackgroundMusic() {
+    if (backgroundMusic) {
+        if (backgroundMusic.paused) {
+            backgroundMusic.play().catch(error => {
+                console.warn('Could not start background music:', error);
+            });
+        }
+
+        return;
+    }
+
+    backgroundMusic = new Audio(
+        `/screen/maps/${chosenArena}/music.mp3`
+    );
+
+    backgroundMusic.loop = true;
+    backgroundMusic.volume = 0.3;
+    backgroundMusic.preload = 'auto';
+
+    backgroundMusic.addEventListener('error', error => {
+        console.error('Failed to load background music:', error);
+    });
+
+    backgroundMusic.play().catch(error => {
+        console.warn('Browser blocked audio playback:', error);
+    });
+}
+
+const muteButton = document.getElementById('mute-button');
+let isMuted = false;
+
+function updateMuteButton() {
+    const svg = muteButton.querySelector('svg');
+
+    if (isMuted) {
+        svg.innerHTML = `
+            <path d="M6.717 3.55A.5.5 0 0 1 7 4v8a.5.5 0 0 1-.812.39L3.825 10.5H1.5A.5.5 0 0 1 1 10V6a.5.5 0 0 1 .5-.5h2.325l2.363-1.89a.5.5 0 0 1 .529-.06M6 5.04 4.312 6.39A.5.5 0 0 1 4 6.5H2v3h2a.5.5 0 0 1 .312.11L6 10.96zm7.854.606a.5.5 0 0 1 0 .708L12.207 8l1.647 1.646a.5.5 0 0 1-.708.708L11.5 8.707l-1.646 1.647a.5.5 0 0 1-.708-.708L10.793 8 9.146 6.354a.5.5 0 1 1 .708-.708L11.5 7.293l1.646-1.647a.5.5 0 0 1 .708 0"/>
+        `;
+    } else {
+        svg.innerHTML = `
+            <path d="M11.536 14.01A8.47 8.47 0 0 0 14.026 8a8.47 8.47 0 0 0-2.49-6.01l-.708.707A7.48 7.48 0 0 1 13.025 8c0 2.071-.84 3.946-2.197 5.303z"/>
+            <path d="M10.121 12.596A6.48 6.48 0 0 0 12.025 8a6.48 6.48 0 0 0-1.904-4.596l-.707.707A5.48 5.48 0 0 1 11.025 8a5.48 5.48 0 0 1-1.61 3.89z"/>
+            <path d="M8.707 11.182A4.5 4.5 0 0 0 10.025 8a4.5 4.5 0 0 0-1.318-3.182L8 5.525A3.5 3.5 0 0 1 9.025 8 3.5 3.5 0 0 1 8 10.475zM6.717 3.55A.5.5 0 0 1 7 4v8a.5.5 0 0 1-.812.39L3.825 10.5H1.5A.5.5 0 0 1 1 10V6a.5.5 0 0 1 .5-.5h2.325l2.363-1.89a.5.5 0 0 1 .529-.06"/>
+        `;
+    }
+}
+
+const startGameOverlay = document.getElementById('start-game-overlay');
+const startGameButton = document.getElementById('start-game-button');
+startGameButton.addEventListener('click', event => {
+    event.preventDefault();
+
+    startBackgroundMusic();
+
+    startGameOverlay.style.display = 'none';
+});
+
+
 // --- Karakter- og kart-valg ---
 // Nå: hardkodede konstanter. Senere: byttes ut med URL search params, f.eks.
 // const params = new URLSearchParams(window.location.search);
@@ -282,10 +342,29 @@ let scene;
 let platforms;
 let mapData;
 
+const chosenArena = 'arena_01';
+
 function preload() {
-    this.load.atlas(CHARACTER_KEY, `/screen/sprites/${CHARACTER_KEY}.png`, `/screen/sprites/${CHARACTER_KEY}.json`);
-    this.load.json('map', `/screen/maps/${MAP_KEY}.json`);
-    this.load.image('background', `/screen/backgrounds/arena_01.png`); // legg til denne
+    this.load.atlas(
+        CHARACTER_KEY,
+        `/screen/sprites/${CHARACTER_KEY}.png`,
+        `/screen/sprites/${CHARACTER_KEY}.json`
+    );
+
+    this.load.json(
+        'map',
+        `/screen/maps/${chosenArena}.json`
+    );
+
+    this.load.image(
+        'background',
+        `/screen/maps/${chosenArena}/background.png`
+    );
+
+    /*this.load.audio(
+        'backgroundMusic',
+        `/screen/maps/${chosenArena}/music.mp3`
+    );*/
 }
 
 
@@ -356,16 +435,15 @@ function create() {
 
     // --- Bygg banen fra det kompilerte kartet ---
     mapData = this.cache.json.get('map');
-    findOverlappingPlatforms(mapData.platforms);
-    console.log("FindOverLappingPlatforms ran..")
-
-
-    
 
     if (!mapData) {
-        console.error(`Kunne ikke laste kart "${MAP_KEY}" — sjekk at /screen/maps/${MAP_KEY}.json finnes`);
+        console.error(
+            `Kunne ikke laste kart "${chosenArena}"`
+        );
         return;
     }
+
+    findOverlappingPlatforms(mapData.platforms);
 
     platforms = this.physics.add.staticGroup();
 
@@ -624,7 +702,9 @@ function removePlayer(id) {
     }
 }
 socket.on('player-joined', ({ id, username }) => {
-    if (!players[id]) spawnPlayer(id, username);
+    if (!players[id]) {
+        spawnPlayer(id, username);
+    }
 });
 
 socket.on('player-left', ({ id }) => {
@@ -700,3 +780,26 @@ const qrUrl = await generateQrCode();
 if (qrUrl) {
     qrCode.innerHTML = `<img src="${qrUrl}" alt="QR code">`;
 }
+
+document.getElementById('pause-button').addEventListener('click', () => {
+    console.log('Pause');
+});
+
+document.getElementById('restart-button').addEventListener('click', () => {
+    console.log('Restart');
+});
+
+muteButton.addEventListener('click', event => {
+    event.preventDefault();
+
+    isMuted = !isMuted;
+
+    if (backgroundMusic) {
+        backgroundMusic.muted = isMuted;
+    }
+
+    muteButton.classList.toggle('muted', isMuted);
+
+    updateMuteButton();
+});
+

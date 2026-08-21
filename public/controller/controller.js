@@ -100,7 +100,7 @@ function updateDamage(damage) {
 
     damageFill.style.width = `${damageRatio * 100}%`;
 
-    damageValue.textContent = Math.round(currentDamage);
+    damageValue.textContent = 1000 - Math.round(currentDamage);
 
     if (currentDamage < 100) {
         damageFill.style.backgroundColor = '#2ecc71';

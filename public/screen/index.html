@@ -17,11 +17,92 @@
         </div>
         <div id="join-url"></div>
 
+        <div id="screen-button-container">
+
+            <!-- Pause -->
+            <div class="screen-button" id="pause-button">
+                <svg xmlns="http://www.w3.org/2000/svg"
+                     class="screen-button-symbol"
+                     viewBox="0 0 16 16">
+                    <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M6.25 5C5.56 5 5 5.56 5 6.25v3.5a1.25 1.25 0 1 0 2.5 0v-3.5C7.5 5.56 6.94 5 6.25 5m3.5 0c-.69 0-1.25.56-1.25 1.25v3.5a1.25 1.25 0 1 0 2.5 0v-3.5C11 5.56 10.44 5 9.75 5"/>
+                </svg>
+            </div>
+        
+            <!-- Restart -->
+            <div class="screen-button" id="restart-button">
+                <svg xmlns="http://www.w3.org/2000/svg"
+                     class="screen-button-symbol"
+                     viewBox="0 0 16 16">
+                    <path fill-rule="evenodd" d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M8 4a4 4 0 1 0 3.636 2.332.5.5 0 0 1 .91-.34A5 5 0 1 1 8 3zM8 5.466V1.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 5.658A.25.25 0 0 1 8 5.466"/>
+                </svg>
+            </div>
+        
+            <!-- Mute -->
+            <div class="screen-button" id="mute-button">
+                <svg xmlns="http://www.w3.org/2000/svg"
+                     class="screen-button-symbol"
+                     viewBox="0 0 16 16">
+                    <path d="M6.717 3.55A.5.5 0 0 1 7 4v8a.5.5 0 0 1-.812.39L3.825 10.5H1.5A.5.5 0 0 1 1 10V6a.5.5 0 0 1 .5-.5h2.325l2.363-1.89a.5.5 0 0 1 .529-.06M6 5.04 4.312 6.39A.5.5 0 0 1 4 6.5H2v3h2a.5.5 0 0 1 .312.11L6 10.96zm7.854.606a.5.5 0 0 1 0 .708L12.207 8l1.647 1.646a.5.5 0 0 1-.708.708L11.5 8.707l-1.646 1.647a.5.5 0 0 1-.708-.708L10.793 8 9.146 6.354a.5.5 0 1 1 .708-.708L11.5 7.293l1.646-1.647a.5.5 0 0 1 .708 0"/>
+                </svg>
+            </div>
+        
+        </div>
+
         <div id="player-list-label">Spillere</div>
         <div id="player-list"></div>
+
+        
+
     </div>
 
     <div id="game-container"></div>
+
+    <div id="start-game-overlay">
+        <div id="start-game-panel">
+
+            <div id="game-logo">
+                Rawr Heaven
+            </div>
+
+            <div id="map-preview">
+                <img
+                    id="map-preview-image"
+                    src="/screen/maps/arena_01/background.png"
+                    alt="Arena"
+                >
+
+                <div id="map-preview-overlay">
+                    <div id="map-name">
+                        Arena 01
+                    </div>
+
+                    <div id="map-description">
+                        En åpen arena med flere nivåer,
+                        plattformer og god plass til god del kaos mellom spillere.
+                    </div>
+                </div>
+            </div>
+
+            <div id="start-game-actions">
+                <button id="start-game-button">
+                    Start spill
+                </button>
+
+                <button id="change-map-button">
+                    Endre bane
+                </button>
+
+                <button id="guide-button">
+                    Guide
+                </button>
+            </div>
+
+            <div id="game-copyright">
+                © 2026 Grefur AS
+            </div>
+
+        </div>
+    </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
