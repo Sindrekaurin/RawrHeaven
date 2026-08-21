@@ -1,10 +1,13 @@
 import {
     initAttackState,
     requestAttack,
+    requestSpecial,
     tryStartAttack,
+    tryStartSpecial,
+    isStunned,
     updateAttack,
     drawAttackHitbox
-} from './attack/main.js';
+} from './logic/attack.js';
 
 // --- Hent gameId fra URL: /screen/{gameId} ---
 const pathParts = window.location.pathname.split('/').filter(Boolean);
@@ -434,8 +437,6 @@ function resolveAnimState(p) {
     return `${state}_${p.facing}`;
 }
 
-
-
 function update(time, delta) {
     const dt = delta / 1000; // sekunder siden forrige frame
 
@@ -444,20 +445,17 @@ function update(time, delta) {
 
         if (!p.sprite) continue;
 
-        tryStartAttack(
-            p, time, CHARACTER_KEY, scene
-        );
+        tryStartAttack(p, time, CHARACTER_KEY, scene);
+        tryStartSpecial(p, time, CHARACTER_KEY, scene);
+        updateAttack(p, time, players, scene);
+        drawAttackHitbox(p, scene, time);
 
-        updateAttack(
-            p, time, players, scene
-        );
-
-        drawAttackHitbox(
-            p, scene, time
-        );
-
+        if (isStunned(p, time)) {
+            // let knockback carry them — don't let held movement fight it
+        } else {
+            p.sprite.body.setVelocityX((p.inputX) * PLAYER_BODY_SPEED);
+        }
         
-        p.sprite.body.setVelocityX((p.inputX) * PLAYER_BODY_SPEED);
 
         detectStall(p, id);
 
@@ -524,16 +522,18 @@ function update(time, delta) {
             let diff = Math.abs(angleDeg - p.lastAngle);
             if (diff > 180) diff = 360 - diff; // handle wraparound
             if (diff > 45) {
-                console.warn(`[ANGLE JUMP] ${p.username} ${p.lastAngle.toFixed(1)}° -> ${angleDeg.toFixed(1)}°`, {
-                    vx: p.sprite.body.velocity.x.toFixed(1),
-                    vy: p.sprite.body.velocity.y.toFixed(1),
-                    x: p.sprite.x.toFixed(1),
-                    y: p.sprite.y.toFixed(1),
-                    embedded: p.sprite.body.embedded,
-                    overlapY: p.sprite.body.overlapY,
-                    blocked: { ...p.sprite.body.blocked },
-                    touching: { ...p.sprite.body.touching }
-                });
+                if (DEV_MODE){
+                    console.warn(`[ANGLE JUMP] ${p.username} ${p.lastAngle.toFixed(1)}° -> ${angleDeg.toFixed(1)}°`, {
+                        vx: p.sprite.body.velocity.x.toFixed(1),
+                        vy: p.sprite.body.velocity.y.toFixed(1),
+                        x: p.sprite.x.toFixed(1),
+                        y: p.sprite.y.toFixed(1),
+                        embedded: p.sprite.body.embedded,
+                        overlapY: p.sprite.body.overlapY,
+                        blocked: { ...p.sprite.body.blocked },
+                        touching: { ...p.sprite.body.touching }
+                    });
+                }
             }
         }
         p.lastAngle = angleDeg;
@@ -594,15 +594,12 @@ function spawnPlayer(id, username) {
 
         lives: MAX_LIVES,
 
-        attackRequested: false,
-        attacking: false,
-        lastAttackTime: 0,
-        attackCooldown: 500,
-
         lastStateSync: 0
     };
 
-    //initAttackState(players[id]);
+    initAttackState(players[id]);
+
+    console.log(players[id])
 
     const initialAnim = `${CHARACTER_KEY}-idle_right`;
     if (scene.anims.exists(initialAnim)) {
@@ -658,6 +655,8 @@ socket.on('button', ({ id, button, pressed }) => {
 
     if (!p) return;
 
+    if (isStunned(p, performance.now())) return;
+
     if (button === 'A' && pressed) {
         const isExtraJump = p.jumpsUsed >= 1;
 
@@ -681,7 +680,11 @@ socket.on('button', ({ id, button, pressed }) => {
     }
 
     if (button === 'B' && pressed) {
-        //requestAttack(p);
+        requestAttack(p);
+    }
+
+    if (button === 'SPECIAL' && pressed) {
+        requestSpecial(p); // new function in attack/main.js, mirrors requestAttack
     }
 });
 

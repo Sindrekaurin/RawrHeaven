@@ -202,3 +202,13 @@ document.addEventListener('keyup', (e) => {
         });
     }
 });
+
+
+fnSwitch.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    socket.emit('button', { button: 'SPECIAL', pressed: true });
+});
+fnSwitch.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    socket.emit('button', { button: 'SPECIAL', pressed: false });
+});
