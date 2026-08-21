@@ -51,15 +51,15 @@
       "type": "platform"
     },
     {
-      "x": 880,
-      "y": 260,
+      "x": 800,
+      "y": 180,
       "width": 320,
       "height": 40,
       "color": "#4a4a5e",
       "type": "platform"
     },
     {
-      "x": 1560,
+      "x": 1280,
       "y": 260,
       "width": 320,
       "height": 40,

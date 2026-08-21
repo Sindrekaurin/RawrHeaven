@@ -228,7 +228,7 @@ const STATE_SYNC_INTERVAL = 150; // ms mellom hver oppdatering sendt til kontrol
 const DEATH_ZONE_PADDING = 200; // hvor langt utenfor kartet man må være for å "dø"
 
 const BG_MARGIN = 1.15; // 15% ekstra margin rundt bakgrunnen
-
+const CHARACTER_SCALE = 0.85 // 85% av normal størrelse
 
 // --- Phaser-oppsett ---
 const DEV_MODE = window.__CONFIG__?.devMode ?? false;
@@ -376,8 +376,9 @@ function create() {
 
         const rect = this.add.rectangle(p.x, p.y, p.width, p.height, colorInt);
         this.physics.add.existing(rect, true);
-        rect.body.checkCollision.left = false;
-        rect.body.checkCollision.right = false;
+        rect.body.checkCollision.left = true;
+        rect.body.checkCollision.right = true;
+        rect.body.checkCollision.down = true;
         // behold bare top/bottom kollisjon - unngår at spilleren "fanges" på vertikale sømmer
         platforms.add(rect);
     });
@@ -507,7 +508,10 @@ function update(time, delta) {
                 stamina: p.stamina,
                 maxStamina: STAMINA_MAX,
                 lives: p.lives,
-                maxLives: MAX_LIVES
+                maxLives: MAX_LIVES,
+                accumulatedDamage: p.damage,
+                isStunned: p.inHitstun,
+                knockedBack: p.knockedBack
             });
         }
         checkVoidDeath(p);
@@ -559,6 +563,7 @@ function spawnPlayer(id, username) {
     const spawn = scene.spawnPoints[spawnIndex];
 
     const sprite = scene.add.sprite(spawn.x, spawn.y, CHARACTER_KEY);
+    sprite.setScale(CHARACTER_SCALE);
     sprite.preFX?.clear();
     sprite.postFX?.clear();
 

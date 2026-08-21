@@ -1,5 +1,5 @@
 const ATTACK_CONFIG = {
-    cooldown: 500,
+    cooldown: 450,
     duration: 250,
 
     damage: 20,
@@ -11,19 +11,23 @@ const ATTACK_CONFIG = {
     hitboxOffsetY: 0,
 
     hitStart: 75,
-    hitEnd: 175
+    hitEnd: 175,
+
+    hitstopMs: 60,      // both fighters freeze for this long on a landed hit
+    shakeIntensity: 0.004,
+    shakeDuration: 90
 };
 
 // Special move: slower cooldown, bigger hitbox, hits like a truck almost
 // regardless of the target's current percent - a real "kill move".
 const SPECIAL_CONFIG = {
-    cooldown: 4000,
+    cooldown: 3500,
     duration: 350,
 
     damage: 12,
 
-    hitboxWidth: 80,
-    hitboxHeight: 65,
+    hitboxWidth: 85,
+    hitboxHeight: 70,
 
     hitboxOffsetX: 55,
     hitboxOffsetY: -10,
@@ -33,14 +37,16 @@ const SPECIAL_CONFIG = {
 
     // Specials get a big flat knockback bonus on top of the normal formula,
     // and largely ignore percent scaling so they're threatening even at 0%.
-    flatKnockbackBonus: 22,
-    percentScalingMultiplier: 0.4
+    flatKnockbackBonus: 55,
+    percentScalingMultiplier: 0.6,
+
+    hitstopMs: 130,     // specials get a much bigger freeze - this is the "feel it" moment
+    shakeIntensity: 0.012,
+    shakeDuration: 180
 };
 
 const KB_CONFIG = {
-    baseKnockback: 8,       // flat KB every hit has, regardless of percent
-    knockbackScaling: 0.18, // KB per percent point
-    damagePerHit: 8,        // percent added per hit (kept for reference; use hitConfig.damage instead)
+    knockbackScaling: 2.55, // was 0.18 - this was the main reason hits felt weak
     weight: 100             // could vary per character later
 };
 
@@ -72,6 +78,10 @@ export function initAttackState(player) {
     player.inHitstun = false;
     player.knockedBack = false; // true while airborne from a hit, used for stun/DI logic
 
+    // Hitstop: freezes THIS player's own movement/physics briefly. Set on
+    // both attacker and target when a hit lands, for that "impact" feel.
+    player.hitstopUntil = 0;
+
     // Combo tracking (per-victim state, set by whoever hits this player)
     player.comboHits = 0;
     player.lastHitBy = null;
@@ -96,6 +106,11 @@ export function isStunned(player, time) {
 }
 
 
+export function isInHitstop(player, time) {
+    return time < player.hitstopUntil;
+}
+
+
 export function tryStartAttack(player, time, characterKey, scene) {
     if (!player.attackRequested) {
         return false;
@@ -103,7 +118,7 @@ export function tryStartAttack(player, time, characterKey, scene) {
 
     player.attackRequested = false;
 
-    if (isStunned(player, time)) {
+    if (isStunned(player, time) || isInHitstop(player, time)) {
         return false;
     }
 
@@ -128,7 +143,7 @@ export function tryStartSpecial(player, time, characterKey, scene) {
 
     player.specialRequested = false;
 
-    if (isStunned(player, time)) {
+    if (isStunned(player, time) || isInHitstop(player, time)) {
         return false;
     }
 
@@ -192,13 +207,19 @@ function playAttackAnimation(player, characterKey, scene, animGroup, fallbackGro
 
 
 export function updateAttack(player, time, players, scene) {
+    // While in hitstop, this player is completely frozen - skip everything,
+    // including advancing their own attack timers, so the freeze is total.
+    if (isInHitstop(player, time)) {
+        return;
+    }
+
     if (player.attacking) {
         const elapsed = time - player.attackStartTime;
 
         if (elapsed >= ATTACK_CONFIG.duration) {
             endAttack(player);
         } else if (elapsed >= ATTACK_CONFIG.hitStart && elapsed <= ATTACK_CONFIG.hitEnd) {
-            processAttackHits(player, players, ATTACK_CONFIG, player.attackHitTargets);
+            processAttackHits(player, players, ATTACK_CONFIG, player.attackHitTargets, scene);
         }
     }
 
@@ -208,7 +229,7 @@ export function updateAttack(player, time, players, scene) {
         if (elapsed >= SPECIAL_CONFIG.duration) {
             endSpecial(player);
         } else if (elapsed >= SPECIAL_CONFIG.hitStart && elapsed <= SPECIAL_CONFIG.hitEnd) {
-            processAttackHits(player, players, SPECIAL_CONFIG, player.specialHitTargets);
+            processAttackHits(player, players, SPECIAL_CONFIG, player.specialHitTargets, scene);
         }
     }
 }
@@ -247,7 +268,7 @@ function getAttackHitbox(player, hitConfig) {
 }
 
 
-function processAttackHits(attacker, players, hitConfig, hitTargetsSet) {
+function processAttackHits(attacker, players, hitConfig, hitTargetsSet, scene) {
     const hitbox = getAttackHitbox(attacker, hitConfig);
 
     for (const targetId in players) {
@@ -266,7 +287,7 @@ function processAttackHits(attacker, players, hitConfig, hitTargetsSet) {
 
         hitTargetsSet.add(targetId);
 
-        applyAttackHit(attacker, target, hitConfig);
+        applyAttackHit(attacker, target, hitConfig, scene);
     }
 }
 
@@ -288,8 +309,12 @@ function computeKnockback(target, hitConfig) {
 
     // Smash-ish formula: knockback grows non-linearly with the target's
     // current percent, so late hits launch much further than early ones.
+    // A flat "always feels like something" base is added so even a 0%
+    // hit visibly shoves the target instead of just tapping them.
+    const base = 90;
+
     let kb =
-        (((p / 10) + (p * d / 20)) * (200 / (KB_CONFIG.weight + 100)) * 1.4 + 18)
+        (base + ((p / 10) + (p * d / 20)) * (200 / (KB_CONFIG.weight + 100)) * 1.4)
         * KB_CONFIG.knockbackScaling;
 
     if (hitConfig.percentScalingMultiplier !== undefined) {
@@ -307,8 +332,8 @@ function computeKnockback(target, hitConfig) {
 
 
 function applyHitstun(target, knockback) {
-    const HITSTUN_PER_KB = 12; // ms of stun per unit of knockback, tune to taste
-    const duration = knockback * HITSTUN_PER_KB;
+    const HITSTUN_PER_KB = 9; // ms of stun per unit of knockback, tune to taste
+    const duration = Math.min(knockback * HITSTUN_PER_KB, 1400); // cap so huge hits don't lock forever
 
     target.hitstunUntil = performance.now() + duration;
     target.inHitstun = true;
@@ -330,14 +355,82 @@ function trackCombo(attacker, target) {
     // Bonus knockback multiplier for consecutive hits in the same combo,
     // capped so combos don't snowball into an instant kill.
     if (target.comboHits >= 2) {
-        const bonus = 1 + Math.min(target.comboHits - 1, 3) * 0.15;
+        const bonus = 1 + Math.min(target.comboHits - 1, 4) * 0.22;
         target.sprite.body.velocity.x *= bonus;
         target.sprite.body.velocity.y *= bonus;
     }
+
+    return target.comboHits;
 }
 
 
-function applyAttackHit(attacker, target, hitConfig = ATTACK_CONFIG) {
+// --- Juice: hitstop, camera shake, hit-flash, scale punch, impact burst --
+
+function applyHitstop(attacker, target, hitConfig, time) {
+    // Freeze BOTH fighters for a moment. This is the single biggest thing
+    // that makes a hit feel like it landed - the game visibly "catches"
+    // on impact before the knockback plays out.
+    attacker.hitstopUntil = time + hitConfig.hitstopMs;
+    target.hitstopUntil = time + hitConfig.hitstopMs;
+}
+
+function applyCameraShake(scene, hitConfig) {
+    if (!scene?.cameras?.main) return;
+    scene.cameras.main.shake(hitConfig.shakeDuration, hitConfig.shakeIntensity);
+}
+
+function applyHitFlash(target, scene) {
+    if (!target.sprite || !scene?.time) return;
+
+    target.sprite.setTintFill(0xffffff);
+
+    scene.time.delayedCall(70, () => {
+        if (target.sprite) {
+            target.sprite.clearTint();
+        }
+    });
+}
+
+function applyImpactPunch(target, scene, comboHits) {
+    if (!target.sprite || !scene?.tweens) return;
+
+    // Bigger, punchier scale-pop the further into a combo we are.
+    const punch = 1.18 + Math.min(comboHits, 4) * 0.05;
+
+    target.sprite.setScale(punch);
+    scene.tweens.add({
+        targets: target.sprite,
+        scaleX: 1,
+        scaleY: 1,
+        duration: 180,
+        ease: 'Back.easeOut'
+    });
+}
+
+function spawnImpactBurst(target, scene, color = 0xffe066) {
+    if (!scene?.add || !scene?.tweens) return;
+
+    // A quick expanding, fading ring at the point of impact. Scaling the
+    // whole object (rather than tweening its radius) works reliably across
+    // Phaser versions for Arc/Circle game objects.
+    const burst = scene.add.circle(target.sprite.x, target.sprite.y, 8, color, 0.85);
+    burst.setDepth(999);
+    burst.setScale(0.4);
+
+    scene.tweens.add({
+        targets: burst,
+        scale: 3.2,
+        alpha: 0,
+        duration: 220,
+        ease: 'Cubic.easeOut',
+        onComplete: () => burst.destroy()
+    });
+}
+
+// -------------------------------------------------------------------------
+
+
+function applyAttackHit(attacker, target, hitConfig = ATTACK_CONFIG, scene) {
     target.damage += hitConfig.damage;
 
     const kb = computeKnockback(target, hitConfig);
@@ -349,9 +442,16 @@ function applyAttackHit(attacker, target, hitConfig = ATTACK_CONFIG) {
     );
 
     applyHitstun(target, kb);
-    trackCombo(attacker, target);
+    const comboHits = trackCombo(attacker, target);
 
-    console.log(`${attacker.username} hit ${target.username} for ${hitConfig.damage}% (now ${target.damage.toFixed(0)}%)`);
+    const time = performance.now();
+    applyHitstop(attacker, target, hitConfig, time);
+    applyCameraShake(scene, hitConfig);
+    applyHitFlash(target, scene);
+    applyImpactPunch(target, scene, comboHits);
+    spawnImpactBurst(target, scene, hitConfig === SPECIAL_CONFIG ? 0x00d4ff : 0xffe066);
+
+    console.log(`${attacker.username} hit ${target.username} for ${hitConfig.damage}% (now ${target.damage.toFixed(0)}%, combo x${comboHits})`);
 }
 
 

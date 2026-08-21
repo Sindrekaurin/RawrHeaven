@@ -136,9 +136,8 @@ io.on('connection', (socket) => {
         socket.to(socket.data.gameId).emit('button', { id: socket.id, ...data });
     });
 
-    socket.on('player-state', ({ targetId, stamina, lives, maxStamina, maxLives }) => {
-        //console.log(`Mottok player-state for ${targetId}: stamina=${stamina}, lives=${lives}`);
-        io.to(targetId).emit('player-state', { stamina, lives, maxStamina, maxLives });
+    socket.on('player-state', (state) => {
+        io.to(state.targetId).emit('player-state', state);
     });
 
     socket.on('disconnect', () => {
