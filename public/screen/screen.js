@@ -261,6 +261,113 @@ startGameButton.addEventListener('click', event => {
     startGameOverlay.style.display = 'none';
 });
 
+function loadCharacterSounds() {
+    const texture = scene.textures.get(CHARACTER_KEY);
+
+    if (!texture) {
+        console.warn(
+            `Character texture "${CHARACTER_KEY}" not found`
+        );
+
+        return;
+    }
+
+    const jsonKey = `${CHARACTER_KEY}-data`;   
+
+    const cacheData = scene.cache.json.get(jsonKey);
+
+    if (!cacheData || !cacheData.sounds) {
+        console.warn(
+            `No sound definitions found for "${CHARACTER_KEY}"`
+        );
+
+        return;
+    }
+
+    for (const [soundName, fileName] of Object.entries(
+        cacheData.sounds
+    )) {
+        const audioKey = `${CHARACTER_KEY}-${soundName}`;
+
+        if (scene.cache.audio.exists(audioKey)) {
+            continue;
+        }
+
+        scene.load.audio(
+            audioKey,
+            `/screen/characters/${CHARACTER_KEY}/${fileName}`
+        );
+    }
+
+    scene.load.once(
+        Phaser.Loader.Events.COMPLETE,
+        () => {
+            console.log(
+                `Loaded character sounds for ${CHARACTER_KEY}`
+            );
+        }
+    );
+
+    scene.load.start();
+}
+
+
+
+const KNOWN_SOUNDS = new Set(['jump', 'attack']);//, 'special', 'hit', 'land', 'death']);
+
+const SOUND_COOLDOWNS = {
+    jump: 120,     // ms mellom hver gang jump-lyden faktisk spiller
+    attack: 150,
+    special: 200,
+    hit: 60,
+    land: 100,
+    death: 0       // ingen cooldown nødvendig, skjer sjelden
+};
+
+const SOUND_VARIATION = {
+    volume: 0.5,        // grunnvolum
+    volumeRange: 0.15,  // +/- variasjon rundt grunnvolum
+    rate: 1.0,          // grunn-hastighet/pitch (1.0 = normal)
+    rateRange: 0.1      // +/- variasjon rundt grunn-rate (0.1 = ±10%)
+};
+
+const lastSoundPlayTime = {}; // { 'kriger-jump::playerId': timestamp, ... }
+
+function playSound(soundName, playerId = 'global', options = {}) {
+    if (!KNOWN_SOUNDS.has(soundName)) {
+        console.warn(`Ukjent lydnavn: "${soundName}"`);
+        return;
+    }
+
+    const key = `${CHARACTER_KEY}-${soundName}`;
+
+    if (!scene.cache.audio.exists(key)) {
+        console.warn(`Lyd "${key}" er ikke lastet`);
+        return;
+    }
+
+    // --- Cooldown-sjekk (per spiller, per lydtype) ---
+    const trackingKey = `${key}::${playerId}`;
+    const now = performance.now();
+    const cooldown = SOUND_COOLDOWNS[soundName] ?? 0;
+    const lastPlayed = lastSoundPlayTime[trackingKey] ?? 0;
+
+    if (now - lastPlayed < cooldown) {
+        return; // for tidlig siden sist, dropp dette kallet
+    }
+
+    lastSoundPlayTime[trackingKey] = now;
+
+    // --- Litt tilfeldig variasjon i volum og pitch, så det ikke blir repetitivt ---
+    const randomVolume = SOUND_VARIATION.volume + (Math.random() * 2 - 1) * SOUND_VARIATION.volumeRange;
+    const randomRate = SOUND_VARIATION.rate + (Math.random() * 2 - 1) * SOUND_VARIATION.rateRange;
+
+    scene.sound.play(key, {
+        volume: Phaser.Math.Clamp(randomVolume, 0, 1),
+        rate: Phaser.Math.Clamp(randomRate, 0.5, 2),
+        ...options // lar deg fortsatt overstyre eksplisitt per kall, f.eks. playSound('death', id, { rate: 1 })
+    });
+}
 
 // --- Karakter- og kart-valg ---
 // Nå: hardkodede konstanter. Senere: byttes ut med URL search params, f.eks.
@@ -347,8 +454,13 @@ const chosenArena = 'arena_01';
 function preload() {
     this.load.atlas(
         CHARACTER_KEY,
-        `/screen/sprites/${CHARACTER_KEY}.png`,
-        `/screen/sprites/${CHARACTER_KEY}.json`
+        `/screen/characters/${CHARACTER_KEY}/${CHARACTER_KEY}.png`,
+        `/screen/characters/${CHARACTER_KEY}/${CHARACTER_KEY}.json`
+    );
+
+    this.load.json(
+        `${CHARACTER_KEY}-data`,
+        `/screen/characters/${CHARACTER_KEY}/${CHARACTER_KEY}.json`
     );
 
     this.load.json(
@@ -360,11 +472,6 @@ function preload() {
         'background',
         `/screen/maps/${chosenArena}/background.png`
     );
-
-    /*this.load.audio(
-        'backgroundMusic',
-        `/screen/maps/${chosenArena}/music.mp3`
-    );*/
 }
 
 
@@ -432,6 +539,8 @@ function create() {
 
     availableAnimGroups = buildAnimationsFromAtlas(CHARACTER_KEY);
     scene.textures.get(CHARACTER_KEY).setFilter(Phaser.Textures.FilterMode.NEAREST);
+
+    loadCharacterSounds(); 
 
     // --- Bygg banen fra det kompilerte kartet ---
     mapData = this.cache.json.get('map');
@@ -745,6 +854,9 @@ socket.on('button', ({ id, button, pressed }) => {
     if (button === 'A' && pressed) {
         const isExtraJump = p.jumpsUsed >= 1;
 
+        // --- Play jump sound ---
+        playSound('jump', id);
+
         if (p.jumpsUsed < MAX_JUMPS) {
             if (
                 isExtraJump &&
@@ -761,11 +873,14 @@ socket.on('button', ({ id, button, pressed }) => {
             if (isExtraJump) {
                 p.stamina -= DOUBLE_JUMP_COST;
             }
+
+            
         }
     }
 
     if (button === 'B' && pressed) {
         requestAttack(p);
+        playSound("attack", p)
     }
 
     if (button === 'SPECIAL' && pressed) {

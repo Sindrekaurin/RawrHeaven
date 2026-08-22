@@ -121,6 +121,7 @@
       }
     }
   },
+  "sounds": {},
   "meta": {
     "image": "knight.png",
     "format": "RGBA8888",

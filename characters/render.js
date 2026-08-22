@@ -5,9 +5,51 @@ const { parse } = require("csv-parse/sync");
 
 const charactersDir = __dirname;
 const palettePath = path.join(charactersDir, "palette.csv");
-const outputDir = path.join(__dirname, "..", "public", "screen", "sprites");
+const outputDir = path.join(
+    __dirname,
+    "..",
+    "public",
+    "screen",
+    "characters"
+);
 
 const outputSize = 128;
+
+const SOUND_NAME_MAP = {
+    attack: [
+        "attack_a",
+        "attack_b",
+        "attack",
+        "sword_swing",
+        "swing"
+    ],
+
+    hit: [
+        "hit",
+        "sword_hit",
+        "impact"
+    ],
+
+    jump: [
+        "jump"
+    ],
+
+    land: [
+        "land",
+        "landing"
+    ],
+
+    hurt: [
+        "hurt",
+        "damage",
+        "damage_taken"
+    ],
+
+    death: [
+        "death",
+        "die"
+    ]
+};
 
 function readCsv(filePath) {
     const content = fs.readFileSync(filePath, "utf8");
@@ -48,7 +90,9 @@ function renderFrame(csvPath, palette) {
 
     for (const row of grid) {
         if (row.length !== width) {
-            throw new Error(`Inconsistent row width in ${csvPath}`);
+            throw new Error(
+                `Inconsistent row width in ${csvPath}`
+            );
         }
     }
 
@@ -77,7 +121,11 @@ function renderFrame(csvPath, palette) {
         }
     }
 
-    const scaledCanvas = createCanvas(outputSize, outputSize);
+    const scaledCanvas = createCanvas(
+        outputSize,
+        outputSize
+    );
+
     const scaledCtx = scaledCanvas.getContext("2d");
 
     scaledCtx.imageSmoothingEnabled = false;
@@ -101,7 +149,11 @@ function createSpritesheet(frames) {
     const width = frames.length * outputSize;
     const height = outputSize;
 
-    const spritesheet = createCanvas(width, height);
+    const spritesheet = createCanvas(
+        width,
+        height
+    );
+
     const ctx = spritesheet.getContext("2d");
 
     ctx.imageSmoothingEnabled = false;
@@ -117,11 +169,62 @@ function createSpritesheet(frames) {
     return spritesheet;
 }
 
-function createAtlas(frames) {
+function getStandardSoundName(fileName) {
+    const baseName = path
+        .basename(
+            fileName,
+            path.extname(fileName)
+        )
+        .toLowerCase();
+
+    for (const [standardName, aliases] of Object.entries(
+        SOUND_NAME_MAP
+    )) {
+        if (aliases.includes(baseName)) {
+            return standardName;
+        }
+    }
+
+    return null;
+}
+
+function findSoundFiles(characterDir) {
+    const soundExtensions = [
+        ".wav",
+        ".mp3",
+        ".ogg",
+        ".m4a"
+    ];
+
+    return fs
+        .readdirSync(characterDir)
+        .filter(file => {
+            const extension = path
+                .extname(file)
+                .toLowerCase();
+
+            return soundExtensions.includes(extension);
+        })
+        .sort((a, b) =>
+            a.localeCompare(b, undefined, {
+                numeric: true,
+                sensitivity: "base"
+            })
+        );
+}
+
+function createAtlas(
+    frames,
+    characterName,
+    soundFiles
+) {
     const atlas = {
         frames: {},
+
+        sounds: {},
+
         meta: {
-            image: "",
+            image: `${characterName}.png`,
             format: "RGBA8888",
             size: {
                 w: frames.length * outputSize,
@@ -139,14 +242,18 @@ function createAtlas(frames) {
                 w: outputSize,
                 h: outputSize
             },
+
             rotated: false,
+
             trimmed: false,
+
             spriteSourceSize: {
                 x: 0,
                 y: 0,
                 w: outputSize,
                 h: outputSize
             },
+
             sourceSize: {
                 w: outputSize,
                 h: outputSize
@@ -154,34 +261,126 @@ function createAtlas(frames) {
         };
     });
 
+    for (const soundFile of soundFiles) {
+        const standardName =
+            getStandardSoundName(soundFile);
+
+        if (!standardName) {
+            console.warn(
+                `  Warning: Unknown sound "${soundFile}" - skipped`
+            );
+
+            continue;
+        }
+
+        if (atlas.sounds[standardName]) {
+            console.warn(
+                `  Warning: Multiple sounds mapped to "${standardName}" - skipped "${soundFile}"`
+            );
+
+            continue;
+        }
+
+        atlas.sounds[standardName] = soundFile;
+    }
+
     return atlas;
 }
 
-function renderCharacter(characterName, characterDir, palette) {
+function copySoundFiles(
+    soundFiles,
+    characterDir,
+    characterOutputDir
+) {
+    for (const soundFile of soundFiles) {
+        const sourcePath = path.join(
+            characterDir,
+            soundFile
+        );
+
+        const destinationPath = path.join(
+            characterOutputDir,
+            soundFile
+        );
+
+        fs.copyFileSync(
+            sourcePath,
+            destinationPath
+        );
+
+        console.log(`  sound: ${soundFile}`);
+    }
+}
+
+function renderCharacter(
+    characterName,
+    characterDir,
+    palette
+) {
     const csvFiles = fs
         .readdirSync(characterDir)
-        .filter(file => file.toLowerCase().endsWith(".csv"))
-        .sort((a, b) => a.localeCompare(b, undefined, {
-            numeric: true,
-            sensitivity: "base"
-        }));
+        .filter(file =>
+            file.toLowerCase().endsWith(".csv")
+        )
+        .sort((a, b) =>
+            a.localeCompare(b, undefined, {
+                numeric: true,
+                sensitivity: "base"
+            })
+        );
 
-    if (csvFiles.length === 0) {
-        console.log(`Skipping ${characterName}: no CSV files`);
+    const soundFiles = findSoundFiles(
+        characterDir
+    );
+
+    if (
+        csvFiles.length === 0 &&
+        soundFiles.length === 0
+    ) {
+        console.log(
+            `Skipping ${characterName}: no CSV or sound files`
+        );
+
         return;
     }
 
-    console.log(`Rendering ${characterName}`);
+    console.log(
+        `Rendering ${characterName}`
+    );
+
+    const characterOutputDir = path.join(
+        outputDir,
+        characterName
+    );
+
+    fs.mkdirSync(
+        characterOutputDir,
+        {
+            recursive: true
+        }
+    );
 
     const frames = [];
 
     for (const file of csvFiles) {
-        const csvPath = path.join(characterDir, file);
-        const frameName = path.basename(file, ".csv");
+        const csvPath = path.join(
+            characterDir,
+            file
+        );
 
-        console.log(`  ${frameName}`);
+        const frameName = path.basename(
+            file,
+            ".csv"
+        );
 
-        const canvas = renderFrame(csvPath, palette);
+        console.log(
+            `  ${frameName}`
+        );
+
+        const canvas = renderFrame(
+            csvPath,
+            palette
+        );
 
         frames.push({
             name: frameName,
@@ -189,63 +388,102 @@ function renderCharacter(characterName, characterDir, palette) {
         });
     }
 
-    const spritesheet = createSpritesheet(frames);
-    const atlas = createAtlas(frames);
+    if (soundFiles.length > 0) {
+        console.log(
+            `  Found ${soundFiles.length} sound effect(s)`
+        );
+    }
 
-    atlas.meta.image = `${characterName}.png`;
+    if (frames.length > 0) {
+        const spritesheet =
+            createSpritesheet(frames);
 
-    fs.mkdirSync(outputDir, {
-        recursive: true
-    });
+        const atlas = createAtlas(
+            frames,
+            characterName,
+            soundFiles
+        );
 
-    const pngPath = path.join(
-        outputDir,
-        `${characterName}.png`
+        const pngPath = path.join(
+            characterOutputDir,
+            `${characterName}.png`
+        );
+
+        const jsonPath = path.join(
+            characterOutputDir,
+            `${characterName}.json`
+        );
+
+        fs.writeFileSync(
+            pngPath,
+            spritesheet.toBuffer("image/png")
+        );
+
+        fs.writeFileSync(
+            jsonPath,
+            JSON.stringify(
+                atlas,
+                null,
+                2
+            )
+        );
+
+        console.log(
+            `  -> ${pngPath}`
+        );
+
+        console.log(
+            `  -> ${jsonPath}`
+        );
+    }
+
+    copySoundFiles(
+        soundFiles,
+        characterDir,
+        characterOutputDir
     );
-
-    const jsonPath = path.join(
-        outputDir,
-        `${characterName}.json`
-    );
-
-    fs.writeFileSync(
-        pngPath,
-        spritesheet.toBuffer("image/png")
-    );
-
-    fs.writeFileSync(
-        jsonPath,
-        JSON.stringify(atlas, null, 2)
-    );
-
-    console.log(`  -> ${pngPath}`);
-    console.log(`  -> ${jsonPath}`);
 }
 
 function main() {
-    console.log("Loading palette...");
+    console.log(
+        "Loading palette..."
+    );
 
     if (!fs.existsSync(palettePath)) {
-        throw new Error(`Palette not found: ${palettePath}`);
+        throw new Error(
+            `Palette not found: ${palettePath}`
+        );
     }
 
     const palette = loadPalette();
 
-    console.log(`Loaded ${Object.keys(palette).length} palette entries`);
+    console.log(
+        `Loaded ${Object.keys(palette).length} palette entries`
+    );
 
     const entries = fs
-        .readdirSync(charactersDir, {
-            withFileTypes: true
-        })
-        .filter(entry => entry.isDirectory());
+        .readdirSync(
+            charactersDir,
+            {
+                withFileTypes: true
+            }
+        )
+        .filter(entry =>
+            entry.isDirectory()
+        );
 
     if (entries.length === 0) {
-        console.log("No character directories found.");
+        console.log(
+            "No character directories found."
+        );
+
         return;
     }
 
     for (const entry of entries) {
-        const characterName = entry.name;
+        const characterName =
+            entry.name;
+
         const characterDir = path.join(
             charactersDir,
             characterName
@@ -258,13 +496,21 @@ function main() {
         );
     }
 
-    console.log("Rendering complete.");
+    console.log(
+        "Rendering complete."
+    );
 }
 
 try {
     main();
 } catch (error) {
-    console.error("\nRender failed:");
-    console.error(error.message);
+    console.error(
+        "\nRender failed:"
+    );
+
+    console.error(
+        error.message
+    );
+
     process.exit(1);
 }
